@@ -1,0 +1,87 @@
+plugins {
+    id 'org.springframework.boot' version '2.5.4'
+    id 'io.spring.dependency-management' version '1.0.11.RELEASE'
+    id "org.openapi.generator" version "4.3.0"
+    id 'com.palantir.docker' version '0.22.0'
+    id 'java'
+}
+
+group = project.group
+version = project.version
+sourceCompatibility = JavaVersion.VERSION_11
+targetCompatibility = JavaVersion.VERSION_11
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation("io.springfox:springfox-swagger2:" + project["springfox.version"]) {
+        exclude group: 'com.fasterxml.jackson.core', module: 'jackson-annotations'
+    }
+    implementation "org.openapitools:jackson-databind-nullable:0.1.0"
+    implementation 'io.kubernetes:client-java-extended:13.0.0'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+def generateOpenApiClient(String apiName, String prefix, String yamlPath, boolean apisOnly) {
+    def taskName = "openApiGenerate${apiName}Api"
+
+    def task = tasks.create(name: taskName, type: org.openapitools.generator.gradle.plugin.tasks.GenerateTask) {
+        generatorName = "java"
+        apiPackage = "com.digambergupta.counterservice.clients.${apiName}.controller"
+        modelPackage = "com.digambergupta.counterservice.clients.${apiName}.model"
+        inputSpec = yamlPath + "/${apiName}.yaml".toString()
+        outputDir = "$buildDir/generated/${apiName}-client".toString()
+        modelNamePrefix = prefix
+        configOptions = [
+                library          : 'resttemplate',
+                dateLibrary      : 'java11',
+                java8            : "true",
+                delegatePattern  : "true",
+                useBeanValidation: "false",
+                useTags          : "true",
+                configPackage    : "com.digambergupta.counterservice.clients.${apiName}.config" // <- unused but must be different to other generators
+        ]
+
+        if (apisOnly) {
+            systemProperties = [
+                    apis           : "",
+                    supportingFiles: ""
+            ]
+        }
+    }
+    task.inputs.dir(yamlPath)
+    task.outputs.dir("$buildDir/generated/${apiName}-client")
+    sourceSets.main.java.srcDir("$buildDir/generated/${apiName}-client/src/main/java")
+    compileJava.dependsOn task
+}
+
+generateOpenApiClient("counter", "Client", "$projectDir/src/main/openapi/client", false)
+
+
+test {
+    useJUnitPlatform()
+}
+
+
+def appInfo = new Properties()
+file("src/main/resources/META-INF/application-info.properties").withInputStream { appInfo.load(it) }
+
+archivesBaseName = appInfo["application.name"]
+
+def dockerTag = "${project['dockerHub']}/${appInfo['application.name']}:${version.replace('-SNAPSHOT', '')}"
+
+docker {
+    name dockerTag
+    copySpec.from("$buildDir/libs").into("")
+    buildArgs([JAR_NAME: "${appInfo['application.name']}-${version}.jar"])
+}
+
+task writeDockerTag {
+    doLast {
+        print dockerTag
+        new File("${buildDir}/docker-tag.txt").text = dockerTag
+    }
+}

@@ -1,0 +1,187 @@
+openapi: "3.0.1"
+info:
+  version: '0.0.1-SNAPSHOT'
+  title: Kubenetes Counter Service API
+servers:
+  - url: http://localhost:8080/
+  - url: https://kubecounterservice-digamber.de/
+security:
+  - apiKey: [ ]
+paths:
+  /kubernetes/counter:
+    get:
+      tags:
+        - kubernetesCounter
+      summary: get counter infomartion by providing kind (eg. Deployment, Service) and metadata name (e.g foobar)
+      operationId: getKubernetesCounter
+      parameters:
+        - name: kind
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: metadataName
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: OK
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/KubernetesCounterResponse"
+        400:
+          description: BADREQUEST
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        404:
+          description: NOTFOUND
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        500:
+          description: SEREVER ERROR
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
+  /kubernetes/counter/increment:
+    post:
+      tags:
+        - kubernetesCounter
+      summary: create and increment the counter by kind and metadata name
+      operationId: createOrIncrementKubeCounter
+      requestBody:
+        description: counter data to be submitted.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitKubernetesCounterIncrementRequest'
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/KubernetesCounterResponse"
+        400:
+          description: BADREQUEST
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        500:
+          description: SEREVER ERROR
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
+  /kubernetes/counter/decrement:
+    post:
+      tags:
+        - kubernetesCounter
+      summary: decrement the counter by kind and metadata name
+      operationId: decrementKubeCount
+      requestBody:
+        description: counter data to be submitted.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitKubernetesCounterDecrementRequest'
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/KubernetesCounterResponse"
+        400:
+          description: BADREQUEST
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        500:
+          description: SEREVER ERROR
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
+components:
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: API-KEY
+  schemas:
+    SubmitKubernetesCounterIncrementRequest:
+      description: Kubernetes resource count response
+      properties:
+        kind:
+          type: string
+        metadataName:
+          type: string
+        incrementCountBy:
+          type: integer
+          default: 1
+          minimum: 1
+      required:
+        - kind
+        - metadataName
+        - incrementCountBy
+
+    SubmitKubernetesCounterDecrementRequest:
+      description: Kubernetes resource count response
+      properties:
+        kind:
+          type: string
+        metadataName:
+          type: string
+        decrementCountBy:
+          type: integer
+          default: 1
+          minimum: 1
+      required:
+        - kind
+        - metadataName
+        - decrementCountBy
+
+    KubernetesCounterResponse:
+      description: Kubernetes resource count response
+      properties:
+        kind:
+          type: string
+        metadataName:
+          type: string
+        count:
+          type: integer
+      required:
+        - kind
+        - metadataName
+
+    ProblemDetail:
+      properties:
+        title:
+          type: string
+        detail:
+          type: string
+        type:
+          type: string
+        instance:
+          type: string
+        status:
+          type: integer
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProblemDetail'

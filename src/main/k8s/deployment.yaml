@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubernetes-controller
+  labels:
+    app: kubectrl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kubectrl
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxSurge: 0,  maxUnavailable: 1 }
+  template:
+    metadata:
+      labels:
+        app: kubectrl
+    spec:
+      containers:
+        - name: counter-service
+          imagePullPolicy: IfNotPresent
+          image: digambergupta/kubernetes-controller:0.0.1
+          env:
+            - name: JAVA_MEM_OPTS
+              value: -Xms100m -Xmx500m
+          ports:
+            - name: http
+              containerPort: 8080
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: kubernetes-controller-service
+spec:
+  selector:
+    app: kubectrl
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 8080
