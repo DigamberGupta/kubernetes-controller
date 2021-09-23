@@ -3,6 +3,8 @@ package com.digambergupta.kubernetescontroller;
 import java.io.IOException;
 import java.time.Duration;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,6 +24,7 @@ import io.kubernetes.client.util.generic.GenericKubernetesApi;
 
 @Configuration
 public class ApplicationConfig {
+	private static final Logger LOGGER = LoggerFactory.getLogger(ApplicationConfig.class);
 
 	@Bean
 	public ApiClient kubeClient() throws IOException {
@@ -36,10 +39,10 @@ public class ApplicationConfig {
 	@Bean
 	public CommandLineRunner commandLineRunner(final SharedInformerFactory sharedInformerFactory, final Controller deploymentCounterController) {
 		return args -> {
-			System.out.println("starting informers..");
+			LOGGER.info("starting informers..");
 			sharedInformerFactory.startAllRegisteredInformers();
 
-			System.out.println("running controller..");
+			LOGGER.info("running controller..");
 			deploymentCounterController.run();
 		};
 	}
